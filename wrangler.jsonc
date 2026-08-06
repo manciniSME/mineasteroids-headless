@@ -1,0 +1,8 @@
+{
+  "name": "mineasteroids-headless",
+  "compatibility_date": "2024-11-01",
+  "assets": {
+    "directory": "out",
+    "not_found_handling": "404-page"
+  }
+}
