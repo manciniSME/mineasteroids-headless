@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { wpFetch } from '../lib/wpgraphql';
 
-const POSTS_QUERY = `
-  query GetPosts {
+const HOMEPAGE_QUERY = `
+  query GetHomepage {
     posts(first: 3) {
       nodes {
         id
@@ -12,6 +12,27 @@ const POSTS_QUERY = `
         excerpt
         date
         link
+      }
+    }
+    heroSlides(first: 10, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        heroSlideFields {
+          heading
+          body
+          ctaLabel
+          ctaUrl
+          backgroundColor
+        }
+      }
+    }
+    inspiringCards(first: 10, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        inspiringCardFields {
+          photoLabel
+          heading
+          ctaLabel
+          ctaUrl
+        }
       }
     }
   }
@@ -33,7 +54,7 @@ const btnStyle = {
   lineHeight: '24px',
 };
 
-const SLIDES = [
+const DEFAULT_SLIDES = [
   {
     bg: '#c1cfe3',
     heading: 'Take the Next Step in Your Engineering Career',
@@ -64,7 +85,7 @@ const SLIDES = [
   },
 ];
 
-const INSPIRING_CARDS = [
+const DEFAULT_INSPIRING_CARDS = [
   { label: 'volunteer photo', bg: '#e4edf4', heading: 'Learn how to get involved with SME.', cta: 'Volunteer Opportunities', href: 'https://www.smenet.org/volunteer' },
   { label: 'webinar photo', bg: '#e4edf4', heading: 'Search the webinar library for live online learning or on-demand.', cta: 'Shop Now', href: 'https://store.smenet.org/21qjg8c' },
   { label: 'studios photo', bg: '#e4edf4', heading: 'NEW videos added - conference lectures and podcasts now available.', cta: 'Watch Now', href: 'https://media.smenet.org' },
@@ -131,8 +152,10 @@ const clamp = (s, n) => (s.length > n ? s.slice(0, n).trimEnd() + '…' : s);
 function useCarousel(count, intervalMs = 6000) {
   const [i, setI] = useState(0);
   const timer = useRef(null);
+  const countRef = useRef(count);
+  countRef.current = count;
 
-  const go = (n) => setI(((n % count) + count) % count);
+  const go = (n) => setI(((n % countRef.current) + countRef.current) % countRef.current);
 
   const start = () => {
     clearInterval(timer.current);
@@ -142,19 +165,49 @@ function useCarousel(count, intervalMs = 6000) {
   useEffect(() => {
     start();
     return () => clearInterval(timer.current);
-  }, [i]);
+  }, [i, count]);
 
   return { i, go, start };
 }
 
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
+  const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const [inspiringCards, setInspiringCards] = useState(DEFAULT_INSPIRING_CARDS);
   const [fetchError, setFetchError] = useState(null);
-  const carousel = useCarousel(SLIDES.length);
+  const carousel = useCarousel(slides.length);
 
   useEffect(() => {
-    wpFetch(POSTS_QUERY)
-      .then((data) => setPosts(data?.posts?.nodes ?? []))
+    wpFetch(HOMEPAGE_QUERY)
+      .then((data) => {
+        setPosts(data?.posts?.nodes ?? []);
+
+        const fetchedSlides = data?.heroSlides?.nodes ?? [];
+        if (fetchedSlides.length > 0) {
+          setSlides(
+            fetchedSlides.map((n) => ({
+              bg: n.heroSlideFields.backgroundColor || '#c1cfe3',
+              heading: n.heroSlideFields.heading,
+              body: n.heroSlideFields.body,
+              cta: n.heroSlideFields.ctaLabel,
+              href: n.heroSlideFields.ctaUrl,
+            }))
+          );
+        }
+
+        const fetchedCards = data?.inspiringCards?.nodes ?? [];
+        if (fetchedCards.length > 0) {
+          setInspiringCards(
+            fetchedCards.map((n) => ({
+              label: n.inspiringCardFields.photoLabel || '',
+              bg: '#e4edf4',
+              heading: n.inspiringCardFields.heading,
+              cta: n.inspiringCardFields.ctaLabel,
+              href: n.inspiringCardFields.ctaUrl,
+            }))
+          );
+        }
+      })
       .catch((err) => setFetchError(err.message));
   }, []);
 
@@ -213,7 +266,7 @@ export default function HomePage() {
 
       {/* hero carousel */}
       <section style={{ position: 'relative', background: '#c1cfe3', minHeight: 480, overflow: 'hidden' }}>
-        {SLIDES.map((slide, n) => (
+        {slides.map((slide, n) => (
           <div key={n} style={{ position: 'absolute', inset: 0, opacity: n === carousel.i ? 1 : 0, transition: 'opacity 600ms ease', pointerEvents: n === carousel.i ? 'auto' : 'none', zIndex: n === carousel.i ? 2 : 1 }}>
             <div style={{ ...PH, position: 'absolute', inset: 0, backgroundColor: slide.bg }} />
             <div style={{ position: 'relative', maxWidth: 1140, margin: '0 auto', padding: '56px 15px', height: '100%', minHeight: 480, display: 'flex', alignItems: 'center' }}>
@@ -227,7 +280,7 @@ export default function HomePage() {
         ))}
 
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 18, display: 'flex', justifyContent: 'center', gap: 10, zIndex: 5 }}>
-          {SLIDES.map((_, n) => (
+          {slides.map((_, n) => (
             <button key={n} type="button" aria-label={`Slide ${n + 1}`} onClick={() => carousel.go(n)} style={{ width: 30, height: 4, border: 0, padding: 0, background: n === carousel.i ? BLUE : 'rgba(94,127,177,.35)', cursor: 'pointer' }} />
           ))}
         </div>
@@ -240,7 +293,7 @@ export default function HomePage() {
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px' }}>
           <h3 style={{ fontFamily: 'Alegreya, serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: BLUE, margin: '0 0 24px', textAlign: 'center' }}>SME. Inspiring Mining Professionals Worldwide.</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
-            {INSPIRING_CARDS.map((card) => (
+            {inspiringCards.map((card) => (
               <article key={card.heading} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ ...PH, height: 180, backgroundColor: card.bg, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 }}>
                   <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#7a90b2' }}>{card.label}</span>
