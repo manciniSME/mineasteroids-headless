@@ -15,13 +15,23 @@ const POSTS_QUERY = `
 `;
 
 export default async function HomePage() {
-  const data = await wpFetch(POSTS_QUERY);
-  const posts = data?.posts?.nodes ?? [];
+  let posts = [];
+  let fetchError = null;
+
+  try {
+    const data = await wpFetch(POSTS_QUERY);
+    posts = data?.posts?.nodes ?? [];
+  } catch (err) {
+    fetchError = err.message;
+  }
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem' }}>
       <h1>mineasteroids.org — headless test</h1>
       <p>Pulled from WPGraphQL at build time.</p>
+      {fetchError && (
+        <p>Couldn't reach WPGraphQL during this build: {fetchError}</p>
+      )}
       <ul>
         {posts.map((post) => (
           <li key={post.id} style={{ marginBottom: '1.5rem' }}>
@@ -30,7 +40,7 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
-      {posts.length === 0 && (
+      {!fetchError && posts.length === 0 && (
         <p>No posts yet — publish something in WP admin and rebuild.</p>
       )}
     </main>
