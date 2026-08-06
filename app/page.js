@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { wpFetch } from '../lib/wpgraphql';
 
 const POSTS_QUERY = `
@@ -14,24 +17,24 @@ const POSTS_QUERY = `
   }
 `;
 
-export default async function HomePage() {
-  let posts = [];
-  let fetchError = null;
+export default function HomePage() {
+  const [posts, setPosts] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  try {
-    const data = await wpFetch(POSTS_QUERY);
-    posts = data?.posts?.nodes ?? [];
-  } catch (err) {
-    fetchError = err.message;
-  }
+  useEffect(() => {
+    wpFetch(POSTS_QUERY)
+      .then((data) => setPosts(data?.posts?.nodes ?? []))
+      .catch((err) => setFetchError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem' }}>
       <h1>mineasteroids.org — headless test</h1>
-      <p>Pulled from WPGraphQL at build time.</p>
-      {fetchError && (
-        <p>Couldn't reach WPGraphQL during this build: {fetchError}</p>
-      )}
+      <p>Pulled from WPGraphQL in the browser, client-side.</p>
+      {loading && <p>Loading…</p>}
+      {fetchError && <p>Couldn't reach WPGraphQL: {fetchError}</p>}
       <ul>
         {posts.map((post) => (
           <li key={post.id} style={{ marginBottom: '1.5rem' }}>
@@ -40,8 +43,8 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
-      {!fetchError && posts.length === 0 && (
-        <p>No posts yet — publish something in WP admin and rebuild.</p>
+      {!loading && !fetchError && posts.length === 0 && (
+        <p>No posts yet — publish something in WP admin.</p>
       )}
     </main>
   );
