@@ -150,7 +150,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
         {slidesError && <p style={{ position: 'relative', zIndex: 11, color: '#900', background: '#fff', padding: 8, marginTop: 98 }}>Hero slides: {slidesError}</p>}
         {slides.map((slide, n) => (
           <div key={n} style={{ position: 'absolute', inset: 0, opacity: n === carousel.i ? 1 : 0, transition: 'opacity 600ms ease', pointerEvents: n === carousel.i ? 'auto' : 'none', zIndex: n === carousel.i ? 2 : 1 }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: slide.bg, ...photoBox(heroImageFor(slide.heading)) }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: slide.bg, ...photoBox(slide.img || heroImageFor(slide.heading)) }} />
             <div style={{ position: 'relative', maxWidth: 1140, margin: '0 auto', padding: '56px 15px', height: '100%', minHeight: 480, display: 'flex', alignItems: 'center' }}>
               <div style={{ background: '#fff', borderRadius: 10, padding: 40, maxWidth: 620, boxShadow: '0 2px 12px rgba(0,0,0,.18)' }}>
                 <h1 style={{ fontFamily: 'Alegreya, serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{slide.heading}</h1>
@@ -178,8 +178,8 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
             {inspiringCards.map((card, idx) => (
               <article key={idx} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={photoBox(CARD_IMAGES[card.label], { height: 180, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 })}>
-                  {!CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
+                <div style={photoBox(card.img || CARD_IMAGES[card.label], { height: 180, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 })}>
+                  {!card.img && !CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
                 </div>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
                   <h4 style={{ fontFamily: 'Alegreya, serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, color: TEXT, margin: 0 }}>{card.heading}</h4>

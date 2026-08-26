@@ -29,6 +29,11 @@ const HERO_SLIDES_QUERY = `
           ctaLabel
           ctaUrl
           backgroundColor
+          image {
+            node {
+              sourceUrl
+            }
+          }
         }
       }
     }
@@ -44,6 +49,11 @@ const INSPIRING_CARDS_QUERY = `
           heading
           ctaLabel
           ctaUrl
+          image {
+            node {
+              sourceUrl
+            }
+          }
         }
       }
     }
@@ -119,6 +129,7 @@ export default function HomePage() {
               body: n.heroSlideFields.body,
               cta: n.heroSlideFields.ctaLabel,
               href: n.heroSlideFields.ctaUrl,
+              img: n.heroSlideFields.image?.node?.sourceUrl ?? null,
             }))
           );
         }
@@ -136,6 +147,7 @@ export default function HomePage() {
               heading: n.inspiringCardFields.heading,
               cta: n.inspiringCardFields.ctaLabel,
               href: n.inspiringCardFields.ctaUrl,
+              img: n.inspiringCardFields.image?.node?.sourceUrl ?? null,
             }))
           );
         }
