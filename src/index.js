@@ -6,7 +6,7 @@ const WP_PATH_PREFIXES = [
   '/wp-admin',
   '/wp-login.php',
   '/wp-json',
-  '/graphql',
+  '/wpapi-4f2a',
   '/wp-content',
   '/wp-includes',
   '/xmlrpc.php',
