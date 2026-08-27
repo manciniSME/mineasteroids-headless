@@ -61,7 +61,7 @@ const UTILITY_LINKS = [
   { label: 'SME Foundation', href: 'https://smefoundation.org/' },
   { label: 'Membership Lookup', href: 'https://www.smenet.org/membership-benefits/membership-lookup' },
   { label: 'Cart', href: 'https://my.smenet.org/my-account/shopping-cart' },
-  { label: 'Login', href: 'https://www.smenet.org/Account/SignIn' },
+  { label: 'Login', href: '/login/' },
 ];
 
 const NAV_LINKS = [

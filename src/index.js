@@ -10,6 +10,7 @@ const WP_PATH_PREFIXES = [
   '/wp-content',
   '/wp-includes',
   '/xmlrpc.php',
+  '/login', // WP page hosting the [sme_rm_login_widget] SSO shortcode
 ];
 
 // The grey-cloud DNS record pointing straight at SiteGround.
