@@ -101,6 +101,26 @@ function photoBox(imgUrl, extraStyle) {
     : { ...PH, ...extraStyle };
 }
 
+// Below-the-fold sections use a real <img loading="lazy"> instead of a CSS
+// background-image, so the browser natively defers the fetch until the
+// element is about to scroll into view.
+function LazyBgImage({ src, alt = '', style, children }) {
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', ...(src ? {} : PH), ...style }}>
+      {src && (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
+      {children}
+    </div>
+  );
+}
+
 export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError }) {
   const carousel = useCarousel(slides.length);
 
@@ -186,9 +206,9 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
             {inspiringCards.map((card, idx) => (
               <article key={idx} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={photoBox(card.img || CARD_IMAGES[card.label], { height: 180, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 })}>
+                <LazyBgImage src={card.img || CARD_IMAGES[card.label]} alt={card.heading} style={{ height: 180, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 }}>
                   {!card.img && !CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
-                </div>
+                </LazyBgImage>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
                   <h4 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, color: TEXT, margin: 0 }}>{card.heading}</h4>
                   <a href={card.href} style={{ ...btnStyle, alignSelf: 'flex-start', marginTop: 'auto' }}>{card.cta}</a>
@@ -236,7 +256,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
         {SPLIT_CARDS.map((card) => (
           <div key={card.heading} style={{ position: 'relative', minHeight: 340, display: 'flex', alignItems: 'center' }}>
-            <div style={photoBox(card.img, { position: 'absolute', inset: 0 })} />
+            <LazyBgImage src={card.img} alt={card.heading} style={{ position: 'absolute', inset: 0 }} />
             <div style={{ position: 'relative', padding: '48px 40px', maxWidth: 540, marginLeft: card.align === 'flex-end' ? 'auto' : undefined, marginRight: card.align === 'flex-start' ? 'auto' : undefined }}>
               <div style={{ background: '#fff', borderRadius: 10, padding: 32 }}>
                 <h1 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h1>
@@ -253,7 +273,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
           {SMALL_CARDS.map((card) => (
             <article key={card.heading} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={photoBox(card.img, { height: 140 })} />
+              <LazyBgImage src={card.img} alt={card.heading} style={{ height: 140 }} />
               <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
                 <h5 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 17.6, lineHeight: '21.12px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h5>
                 <p style={{ margin: '0 0 16px', color: TEXT, fontSize: 16, lineHeight: '24px', flex: 1 }}>{card.body}</p>
