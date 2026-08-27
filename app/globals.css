@@ -4,13 +4,13 @@
 
 body {
   margin: 0;
-  font-family: Roboto, sans-serif;
+  font-family: var(--font-roboto), sans-serif;
   color: #212529;
   background: #fff;
 }
 
 h1, h2, h3 {
-  font-family: Alegreya, serif;
+  font-family: var(--font-alegreya), serif;
 }
 
 a {

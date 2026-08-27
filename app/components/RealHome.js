@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useCarousel } from './useCarousel';
 
 const PH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(33,37,41,.08) 0 8px, rgba(33,37,41,.03) 8px 16px)' };
@@ -16,7 +17,7 @@ const btnStyle = {
   padding: '6px 24px',
   fontSize: 16,
   lineHeight: '24px',
-  fontFamily: 'Alegreya, serif',
+  fontFamily: 'var(--font-alegreya), serif',
   fontWeight: 700,
   textTransform: 'uppercase',
 };
@@ -103,6 +104,13 @@ function photoBox(imgUrl, extraStyle) {
 export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError }) {
   const carousel = useCarousel(slides.length);
 
+  // Only fetch the background photo for a slide once it's actually been shown,
+  // instead of loading all of them up front — this is what was blowing up LCP.
+  const [loadedSlides, setLoadedSlides] = useState(() => new Set([0]));
+  useEffect(() => {
+    setLoadedSlides((prev) => (prev.has(carousel.i) ? prev : new Set(prev).add(carousel.i)));
+  }, [carousel.i]);
+
   return (
     <div style={{ width: '100%', overflowX: 'hidden' }}>
       {/* utility bar */}
@@ -135,7 +143,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
         <header style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, background: 'rgba(0,0,0,0.5)' }}>
           <nav style={{ maxWidth: 1140, margin: '0 auto', padding: '8px 15px', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             <a href="https://www.smenet.org/" style={{ flex: '0 0 auto', padding: '6px 0' }}>
-              <img src="https://smenet.blob.core.windows.net/smecms/sme/media/sme/logos/sme-horz-white.png" alt="Society for Mining, Metallurgy, and Exploration" style={{ display: 'block', height: 52, width: 'auto' }} />
+              <img src="https://smenet.blob.core.windows.net/smecms/sme/media/sme/logos/sme-horz-white.png" alt="Society for Mining, Metallurgy, and Exploration" width={214} height={52} style={{ display: 'block', height: 52, width: 'auto' }} />
             </a>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', flex: '1 1 auto' }}>
               {NAV_LINKS.map((l) => (
@@ -150,11 +158,11 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
         {slidesError && <p style={{ position: 'relative', zIndex: 11, color: '#900', background: '#fff', padding: 8, marginTop: 98 }}>Hero slides: {slidesError}</p>}
         {slides.map((slide, n) => (
           <div key={n} style={{ position: 'absolute', inset: 0, opacity: n === carousel.i ? 1 : 0, transition: 'opacity 600ms ease', pointerEvents: n === carousel.i ? 'auto' : 'none', zIndex: n === carousel.i ? 2 : 1 }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: slide.bg, ...photoBox(slide.img || heroImageFor(slide.heading)) }} />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: slide.bg, ...(loadedSlides.has(n) ? photoBox(slide.img || heroImageFor(slide.heading)) : {}) }} />
             <div style={{ position: 'relative', maxWidth: 1140, margin: '0 auto', padding: '56px 15px', height: '100%', minHeight: 480, display: 'flex', alignItems: 'center' }}>
               <div style={{ background: '#fff', borderRadius: 10, padding: 40, maxWidth: 620, boxShadow: '0 2px 12px rgba(0,0,0,.18)' }}>
-                <h1 style={{ fontFamily: 'Alegreya, serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{slide.heading}</h1>
-                <h3 style={{ fontFamily: 'Alegreya, serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 20px' }}>{slide.body}</h3>
+                <h1 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{slide.heading}</h1>
+                <h3 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 20px' }}>{slide.body}</h3>
                 <a href={slide.href} style={btnStyle}>{slide.cta}</a>
               </div>
             </div>
@@ -173,7 +181,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
       {/* inspiring band + 3 link cards */}
       <section style={{ background: '#f6fbfd', padding: '48px 0' }}>
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px' }}>
-          <h3 style={{ fontFamily: 'Alegreya, serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 24px', textAlign: 'center' }}>SME. Inspiring Mining Professionals Worldwide.</h3>
+          <h3 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 24px', textAlign: 'center' }}>SME. Inspiring Mining Professionals Worldwide.</h3>
           {cardsError && <p style={{ color: '#900' }}>Inspiring cards: {cardsError}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
             {inspiringCards.map((card, idx) => (
@@ -182,7 +190,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
                   {!card.img && !CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
                 </div>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
-                  <h4 style={{ fontFamily: 'Alegreya, serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, color: TEXT, margin: 0 }}>{card.heading}</h4>
+                  <h4 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, color: TEXT, margin: 0 }}>{card.heading}</h4>
                   <a href={card.href} style={{ ...btnStyle, alignSelf: 'flex-start', marginTop: 'auto' }}>{card.cta}</a>
                 </div>
               </article>
@@ -194,7 +202,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
       {/* latest news — real WPGraphQL content */}
       <section style={{ background: '#fff', padding: '48px 0' }}>
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px' }}>
-          <h1 style={{ fontFamily: 'Alegreya, serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 24px' }}>Latest News</h1>
+          <h1 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 24px' }}>Latest News</h1>
           {postsError && <p style={{ color: TEXT }}>Couldn't reach WPGraphQL: {postsError}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 30 }}>
             {newsItems.map((post) => (
@@ -204,7 +212,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
                 </div>
                 <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
                   <a href={post.url} style={{ fontSize: 13.6, lineHeight: '20.4px', fontWeight: 300, color: TEXT }}>{post.date}</a>
-                  <h2 style={{ fontFamily: 'Alegreya, serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}>
                     <a href={post.url} style={{ color: TEXT }}>{post.title}</a>
                   </h2>
                   <p style={{ margin: '0 0 16px', color: TEXT, fontSize: 16, lineHeight: '24px', flex: 1 }}>{post.excerpt}</p>
@@ -231,7 +239,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
             <div style={photoBox(card.img, { position: 'absolute', inset: 0 })} />
             <div style={{ position: 'relative', padding: '48px 40px', maxWidth: 540, marginLeft: card.align === 'flex-end' ? 'auto' : undefined, marginRight: card.align === 'flex-start' ? 'auto' : undefined }}>
               <div style={{ background: '#fff', borderRadius: 10, padding: 32 }}>
-                <h1 style={{ fontFamily: 'Alegreya, serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h1>
+                <h1 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 32, lineHeight: '38.4px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h1>
                 <p style={{ margin: '0 0 16px', color: TEXT, fontSize: 16, lineHeight: '24px' }}>{card.body}</p>
                 <a href={card.href} style={btnStyle}>Read More</a>
               </div>
@@ -247,7 +255,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
             <article key={card.heading} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={photoBox(card.img, { height: 140 })} />
               <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-                <h5 style={{ fontFamily: 'Alegreya, serif', fontSize: 17.6, lineHeight: '21.12px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h5>
+                <h5 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 17.6, lineHeight: '21.12px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>{card.heading}</h5>
                 <p style={{ margin: '0 0 16px', color: TEXT, fontSize: 16, lineHeight: '24px', flex: 1 }}>{card.body}</p>
                 <a href={card.href} style={{ ...btnStyle, alignSelf: 'flex-start' }}>{card.cta}</a>
               </div>
@@ -260,7 +268,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
       <footer style={{ backgroundImage: 'linear-gradient(90deg, #e7faf5 0%, #d6ecf8 100%)', color: TEXT, fontSize: 12, lineHeight: '18px', fontWeight: 300, padding: 24 }}>
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '24px 15px', display: 'grid', gridTemplateColumns: 'minmax(260px, 1.2fr) repeat(2, minmax(200px, 1fr))', gap: 40 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <img src="https://smenet.blob.core.windows.net/smecms/sme/media/sme/logos/sme_full-large-min.png" alt="Society for Mining, Metallurgy, and Exploration" style={{ width: 210, maxWidth: '100%', height: 'auto' }} />
+            <img src="https://smenet.blob.core.windows.net/smecms/sme/media/sme/logos/sme_full-large-min.png" alt="Society for Mining, Metallurgy, and Exploration" width={210} height={127} style={{ width: 210, maxWidth: '100%', height: 'auto' }} />
             <p style={{ margin: '0 0 8px', color: TEXT, fontSize: 16, lineHeight: '24px', fontWeight: 400 }}>Inspiring Mining Professionals Worldwide</p>
             <div style={{ fontSize: 13.6, lineHeight: '20.4px' }}>© 2026 SME All Rights Reserved. SME is a member society of OneMine, the SME Foundation, and the American Institute of Mining, Metallurgical, and Petroleum Engineers (AIME).</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
@@ -271,7 +279,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontFamily: 'Alegreya, serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>Navigation</h3>
+            <h3 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>Navigation</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13.6, lineHeight: '20.4px' }}>
               {FOOTER_NAV.map((l) => (
                 <a key={l.label} href={l.href} style={{ color: TEXT }}>{l.label}</a>
@@ -280,12 +288,12 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           </nav>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontFamily: 'Alegreya, serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>Contacts</h3>
+            <h3 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 20, lineHeight: '24px', fontWeight: 500, color: TEXT, margin: '0 0 8px' }}>Contacts</h3>
             <p style={{ margin: '0 0 16px', color: TEXT, fontSize: 13.6, lineHeight: '20.4px' }}>12999 E Adam Aircraft Circle<br />Englewood, CO 80112</p>
-            <h2 style={{ fontFamily: 'Alegreya, serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}><a href="tel:+13039484200" style={{ color: TEXT }}>+1 (303) 948 4200</a></h2>
+            <h2 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}><a href="tel:+13039484200" style={{ color: TEXT }}>+1 (303) 948 4200</a></h2>
             <p style={{ margin: '0 0 16px', fontSize: 13.6, lineHeight: '20.4px' }}><a href="mailto:cs@smenet.org" style={{ color: TEXT }}>cs@smenet.org</a></p>
             <p style={{ margin: '0 0 8px', color: TEXT, fontSize: 13.6, lineHeight: '20.4px' }}>For book information:</p>
-            <h2 style={{ fontFamily: 'Alegreya, serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}><a href="tel:+13039484237" style={{ color: TEXT }}>+1 (303) 948 4237</a></h2>
+            <h2 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 24, lineHeight: '28.8px', fontWeight: 500, margin: '0 0 8px' }}><a href="tel:+13039484237" style={{ color: TEXT }}>+1 (303) 948 4237</a></h2>
             <p style={{ margin: 0, fontSize: 13.6, lineHeight: '20.4px' }}><a href="mailto:books@smenet.org" style={{ color: TEXT }}>books@smenet.org</a></p>
           </div>
         </div>

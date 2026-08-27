@@ -1,4 +1,19 @@
+import { Alegreya, Roboto } from 'next/font/google';
 import './globals.css';
+
+const alegreya = Alegreya({
+  weight: '700',
+  subsets: ['latin'],
+  variable: '--font-alegreya',
+  display: 'swap',
+});
+
+const roboto = Roboto({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+  variable: '--font-roboto',
+  display: 'swap',
+});
 
 export const metadata = {
   title: 'mineasteroids.org — headless test',
@@ -7,15 +22,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700&family=Roboto:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${alegreya.variable} ${roboto.variable}`}>
       <body>{children}</body>
     </html>
   );
