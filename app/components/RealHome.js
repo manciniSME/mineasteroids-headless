@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCarousel } from './useCarousel';
+import LoginDropdown from './LoginDropdown';
 
 const PH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(33,37,41,.08) 0 8px, rgba(33,37,41,.03) 8px 16px)' };
 const TEXT = '#212529';
@@ -153,9 +154,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
             {UTILITY_LINKS.map((l) => (
               <a key={l.label} href={l.href} style={{ color: '#fff' }}>{l.label}</a>
             ))}
-            <a href="/login/" style={{ color: '#fff', fontWeight: loginName ? 'bold' : 'normal' }}>
-              {loginName ? `Hi, ${loginName}` : 'Login'}
-            </a>
+            <LoginDropdown loginName={loginName} />
           </div>
         </div>
       </div>
