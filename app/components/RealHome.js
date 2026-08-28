@@ -61,7 +61,6 @@ const UTILITY_LINKS = [
   { label: 'SME Foundation', href: 'https://smefoundation.org/' },
   { label: 'Membership Lookup', href: 'https://www.smenet.org/membership-benefits/membership-lookup' },
   { label: 'Cart', href: 'https://my.smenet.org/my-account/shopping-cart' },
-  { label: 'Login', href: '/login/' },
 ];
 
 const NAV_LINKS = [
@@ -121,7 +120,7 @@ function LazyBgImage({ src, alt = '', style, children }) {
   );
 }
 
-export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError }) {
+export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError, loginName }) {
   const carousel = useCarousel(slides.length);
 
   // Only fetch the background photo for a slide once it's actually been shown,
@@ -154,6 +153,9 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
             {UTILITY_LINKS.map((l) => (
               <a key={l.label} href={l.href} style={{ color: '#fff' }}>{l.label}</a>
             ))}
+            <a href="/login/" style={{ color: '#fff', fontWeight: loginName ? 'bold' : 'normal' }}>
+              {loginName ? `Hi, ${loginName}` : 'Login'}
+            </a>
           </div>
         </div>
       </div>

@@ -27,6 +27,19 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
   const [postsError, setPostsError] = useState(initialErrors.posts);
   const [slidesError, setSlidesError] = useState(initialErrors.slides);
   const [cardsError, setCardsError] = useState(initialErrors.cards);
+  // null = still checking, false = logged out, string = display name
+  const [loginName, setLoginName] = useState(null);
+
+  // Read-only check against WP's own "who am I" endpoint — same-origin, so
+  // the browser sends the WP login cookie automatically once someone's
+  // signed in via /login/. We never touch credentials or the logout nonce
+  // ourselves; this just decides what the header shows.
+  useEffect(() => {
+    fetch('/wp-json/wp/v2/users/me', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((user) => setLoginName(user?.name || 'Member'))
+      .catch(() => setLoginName(false));
+  }, []);
 
   // The page ships with whatever was current at build time (fast first paint,
   // good LCP). This re-fetches on every load so edits made in wp-admin since
@@ -70,7 +83,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
     facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(p.link)}`,
   }));
 
-  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError };
+  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError, loginName };
 
   return look === 'wireframe' ? <WireframeHome {...props} /> : <RealHome {...props} />;
 }
