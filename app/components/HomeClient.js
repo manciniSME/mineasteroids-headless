@@ -41,6 +41,61 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
       .catch(() => setLoginName(false));
   }, []);
 
+  // Silent cross-domain SSO check. The SME Re:Members SSO plugin normally
+  // does this itself via a hidden iframe injected in wp_footer — but that
+  // only fires when WordPress's PHP actually renders the page, and our
+  // homepage never touches WP's theme layer (it's a static Next.js export).
+  // So a visitor who's already signed in on my.smenet.org, but has never
+  // explicitly logged in on THIS site, would otherwise sit stuck on "Login"
+  // forever. This reproduces the plugin's own iframe check client-side:
+  // point a hidden iframe at rM's login.aspx with a RedirectUrl back to our
+  // own homepage. If the browser already carries an active rM session
+  // cookie, rM silently redirects the iframe back to us with an ?sso=
+  // token, which our Worker routes to WP, WP validates it and sets our
+  // auth cookie, and we detect the iframe landing back on our own origin
+  // and reload the real page to pick it up. If there's no rM session, the
+  // iframe just stays cross-origin and nothing happens.
+  useEffect(() => {
+    if (loginName !== false) return; // only once we've confirmed no local WP session
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('sso') || params.has('sso_check') || params.has('sme_rm_no_sso')) return;
+    if (document.cookie.includes('sme_rm_sso_checked=1')) return;
+
+    document.cookie = 'sme_rm_sso_checked=1; max-age=300; path=/';
+
+    const returnUrl = `${window.location.origin}/?sso_check=1`;
+    const ssoUrl = `https://my.smenet.org/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.title = '';
+    iframe.src = ssoUrl;
+
+    let done = false;
+    function finish() {
+      if (done) return;
+      try {
+        const href = iframe.contentWindow.location.href;
+        if (href.indexOf(window.location.origin) === 0) {
+          done = true;
+          window.location.reload();
+        }
+      } catch {
+        // Still cross-origin — no active rM session, nothing to do.
+      }
+    }
+    iframe.addEventListener('load', finish);
+    document.body.appendChild(iframe);
+    const timer = setTimeout(finish, 4000);
+
+    return () => {
+      clearTimeout(timer);
+      iframe.remove();
+    };
+  }, [loginName]);
+
   // The page ships with whatever was current at build time (fast first paint,
   // good LCP). This re-fetches on every load so edits made in wp-admin since
   // the last build still show up within a second of hitting the page.
