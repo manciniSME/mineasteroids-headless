@@ -59,13 +59,20 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
     if (loginName !== false) return; // only once we've confirmed no local WP session
 
     const params = new URLSearchParams(window.location.search);
-    if (params.has('sso') || params.has('sso_check') || params.has('sme_rm_no_sso')) return;
-    if (document.cookie.includes('sme_rm_sso_checked=1')) return;
+    if (params.has('sso') || params.has('sso_check') || params.has('sme_rm_no_sso')) {
+      console.log('[SME SSO] skipped: already mid-callback (sso/sso_check/sme_rm_no_sso in URL)');
+      return;
+    }
+    if (document.cookie.includes('sme_rm_sso_checked=1')) {
+      console.log('[SME SSO] skipped: already checked in the last 5 min (sme_rm_sso_checked cookie present)');
+      return;
+    }
 
     document.cookie = 'sme_rm_sso_checked=1; max-age=300; path=/';
 
     const returnUrl = `${window.location.origin}/?sso_check=1`;
     const ssoUrl = `https://my.smenet.org/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
+    console.log('[SME SSO] starting silent check, iframe src =', ssoUrl);
 
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
@@ -74,21 +81,25 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
     iframe.src = ssoUrl;
 
     let done = false;
-    function finish() {
+    function finish(reason) {
       if (done) return;
       try {
         const href = iframe.contentWindow.location.href;
+        console.log('[SME SSO] iframe readable (same-origin), href =', href, '| trigger:', reason);
         if (href.indexOf(window.location.origin) === 0) {
           done = true;
+          console.log('[SME SSO] iframe landed back on our origin — reloading to pick up the auth cookie');
           window.location.reload();
+        } else {
+          console.log('[SME SSO] iframe same-origin-readable but not on our origin yet — leaving it alone');
         }
-      } catch {
-        // Still cross-origin — no active rM session, nothing to do.
+      } catch (err) {
+        console.log('[SME SSO] iframe still cross-origin (no active rM session, or framing blocked) | trigger:', reason, '| error:', err && err.message);
       }
     }
-    iframe.addEventListener('load', finish);
+    iframe.addEventListener('load', () => finish('load event'));
     document.body.appendChild(iframe);
-    const timer = setTimeout(finish, 4000);
+    const timer = setTimeout(() => finish('4s timeout'), 4000);
 
     return () => {
       clearTimeout(timer);
