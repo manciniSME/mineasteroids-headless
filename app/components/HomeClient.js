@@ -88,8 +88,14 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
         console.log('[SME SSO] iframe readable (same-origin), href =', href, '| trigger:', reason);
         if (href.indexOf(window.location.origin) === 0) {
           done = true;
-          console.log('[SME SSO] iframe landed back on our origin — reloading to pick up the auth cookie');
-          window.location.reload();
+          // Auto-reload disabled while we investigate a reported reload
+          // loop (visible as the hero carousel rapidly flickering between
+          // slides) — most likely the WP auth cookie set inside this
+          // once-cross-origin iframe gets dropped by the browser's
+          // third-party cookie partitioning, so the reload just lands back
+          // on "logged out" and re-triggers the whole check again. Log only
+          // until that's confirmed.
+          console.log('[SME SSO] iframe landed back on our origin (would normally reload here — reload disabled while debugging)');
         } else {
           console.log('[SME SSO] iframe same-origin-readable but not on our origin yet — leaving it alone');
         }
