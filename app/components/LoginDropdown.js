@@ -162,8 +162,8 @@ export default function LoginDropdown({ loginName }) {
             type="submit"
             disabled={loading}
             style={{
-              background: 'rgb(191, 215, 48)',
-              color: '#000',
+              background: '#a9ce3a',
+              color: '#23231f',
               border: 'none',
               borderRadius: 4,
               padding: '8px 12px',
@@ -178,10 +178,10 @@ export default function LoginDropdown({ loginName }) {
           </button>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-            <a href={`${RM_BASE}/account/login.aspx`} target="_blank" rel="noopener noreferrer" style={{ color: '#5e7fb1' }}>
+            <a href={`${RM_BASE}/account/login.aspx`} target="_blank" rel="noopener noreferrer" style={{ color: '#1b75bb' }}>
               Forgot password?
             </a>
-            <a href={`${RM_BASE}/account/createaccount.aspx`} target="_blank" rel="noopener noreferrer" style={{ color: '#5e7fb1' }}>
+            <a href={`${RM_BASE}/account/createaccount.aspx`} target="_blank" rel="noopener noreferrer" style={{ color: '#1b75bb' }}>
               Join SME
             </a>
           </div>
