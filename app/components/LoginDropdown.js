@@ -17,13 +17,36 @@ async function fetchFreshNonce() {
   }
 }
 
+const POPUP_WIDTH = 260;
+
 export default function LoginDropdown({ loginName }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pos, setPos] = useState(null);
   const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+
+  // The utility bar's mega-menu is dense enough to wrap at some viewport
+  // widths, which moves this trigger around unpredictably — a CSS anchor
+  // like `right: 0` on the popup assumes it always sits near the page's
+  // right edge, and silently renders off-screen (invisible, unclickable)
+  // whenever that assumption breaks. Computing the position from the
+  // trigger's actual on-screen location, clamped to the viewport, avoids
+  // that regardless of how the bar above it wraps.
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    function place() {
+      const r = btnRef.current.getBoundingClientRect();
+      const left = Math.min(Math.max(8, r.right - POPUP_WIDTH), window.innerWidth - POPUP_WIDTH - 8);
+      setPos({ top: r.bottom + 8, left });
+    }
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [open]);
 
   useEffect(() => {
     function onDocClick(e) {
