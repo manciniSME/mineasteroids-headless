@@ -27,18 +27,39 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
   const [postsError, setPostsError] = useState(initialErrors.posts);
   const [slidesError, setSlidesError] = useState(initialErrors.slides);
   const [cardsError, setCardsError] = useState(initialErrors.cards);
-  // null = still checking, false = logged out, string = display name
-  const [loginName, setLoginName] = useState(null);
+  // null = still checking, false = logged out, object = logged in
+  const [loginInfo, setLoginInfo] = useState(null);
 
-  // Read-only check against WP's own "who am I" endpoint — same-origin, so
-  // the browser sends the WP login cookie automatically once someone's
-  // signed in via /login/. We never touch credentials or the logout nonce
-  // ourselves; this just decides what the header shows.
+  // The SSO plugin already computes everything the header needs — display
+  // name, avatar, member type, and a properly-nonced logout URL — and
+  // localizes it as `window.smeRmSso` on every WP-rendered page (see
+  // wp_localize_script() in class-rm-login.php). Our homepage never renders
+  // through WP's PHP/theme layer, so we can't read that global directly —
+  // but /login/ IS a real WP-rendered page (our Worker proxies it there),
+  // so fetching its HTML in the background and pulling that same object out
+  // of the markup gets us the exact same data without needing any new
+  // WordPress-side endpoint. This is same-origin + credentials, so the
+  // browser sends the WP login cookie automatically once someone's signed
+  // in — we never touch credentials or reconstruct a logout nonce ourselves.
   useEffect(() => {
-    fetch('/wp-json/wp/v2/users/me', { credentials: 'same-origin' })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((user) => setLoginName(user?.name || 'Member'))
-      .catch(() => setLoginName(false));
+    fetch('/login/', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.text() : Promise.reject(res.status)))
+      .then((html) => {
+        const match = html.match(/var\s+smeRmSso\s*=\s*(\{.*?\});/s);
+        if (!match) throw new Error('smeRmSso config not found in /login/ markup');
+        const cfg = JSON.parse(match[1]);
+        if (cfg.loggedIn) {
+          setLoginInfo({
+            displayName: cfg.displayName || 'Member',
+            avatarUrl: cfg.avatarUrl || '',
+            memberType: cfg.memberType || '',
+            logoutUrl: cfg.logoutUrl || '/wp-login.php?action=logout',
+          });
+        } else {
+          setLoginInfo(false);
+        }
+      })
+      .catch(() => setLoginInfo(false));
   }, []);
 
   // Silent cross-domain SSO check. The SME Re:Members SSO plugin normally
@@ -56,7 +77,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
   // and reload the real page to pick it up. If there's no rM session, the
   // iframe just stays cross-origin and nothing happens.
   useEffect(() => {
-    if (loginName !== false) return; // only once we've confirmed no local WP session
+    if (loginInfo !== false) return; // only once we've confirmed no local WP session
 
     const params = new URLSearchParams(window.location.search);
     if (params.has('sso') || params.has('sso_check') || params.has('sme_rm_no_sso')) {
@@ -111,7 +132,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
       clearTimeout(timer);
       iframe.remove();
     };
-  }, [loginName]);
+  }, [loginInfo]);
 
   // The page ships with whatever was current at build time (fast first paint,
   // good LCP). This re-fetches on every load so edits made in wp-admin since
@@ -155,7 +176,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
     facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(p.link)}`,
   }));
 
-  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError, loginName };
+  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError, loginInfo };
 
   return look === 'wireframe' ? <WireframeHome {...props} /> : <RealHome {...props} />;
 }

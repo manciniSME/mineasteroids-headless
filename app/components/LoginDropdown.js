@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const AJAX_URL = '/wp-admin/admin-ajax.php';
 const RM_BASE = 'https://my.smenet.org';
+const POPUP_WIDTH = 260;
 
 async function fetchFreshNonce() {
   try {
@@ -17,9 +18,17 @@ async function fetchFreshNonce() {
   }
 }
 
-const POPUP_WIDTH = 260;
+const popupBaseStyle = {
+  position: 'fixed',
+  width: POPUP_WIDTH,
+  background: '#fff',
+  color: '#212529',
+  borderRadius: 6,
+  boxShadow: '0 4px 20px rgba(0,0,0,.25)',
+  zIndex: 200,
+};
 
-export default function LoginDropdown({ loginName }) {
+export default function LoginDropdown({ loginInfo }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,17 +72,6 @@ export default function LoginDropdown({ loginName }) {
     };
   }, []);
 
-  // Already signed in — no form needed, just hand off to the WP-rendered
-  // /login/ page for account management / sign out (it already has a
-  // correctly-generated logout nonce; we don't try to reconstruct one here).
-  if (loginName) {
-    return (
-      <a href="/login/" style={{ color: '#fff', fontWeight: 'bold' }}>
-        Hi, {loginName}
-      </a>
-    );
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -111,39 +109,86 @@ export default function LoginDropdown({ loginName }) {
     }
   }
 
+  const loggedIn = !!loginInfo;
+
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="true"
-        style={{ background: 'none', border: 'none', color: '#fff', font: 'inherit', padding: 0, cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: '#fff', font: 'inherit', padding: 0, cursor: 'pointer' }}
       >
-        Login
+        {loggedIn ? (
+          <>
+            {loginInfo.avatarUrl ? (
+              <img src={loginInfo.avatarUrl} alt="" width={24} height={24} style={{ borderRadius: '50%', display: 'block' }} />
+            ) : (
+              <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                {loginInfo.displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span style={{ fontWeight: 'bold' }}>Hi, {loginInfo.displayName}</span>
+          </>
+        ) : (
+          'Login'
+        )}
       </button>
 
-      {open && (
+      {open && pos && loggedIn && (
+        <div
+          role="dialog"
+          aria-label="Account"
+          style={{ ...popupBaseStyle, top: pos.top, left: pos.left, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <a
+            href={`${RM_BASE}/my-account/my-profile/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#212529' }}
+          >
+            {loginInfo.avatarUrl ? (
+              <img src={loginInfo.avatarUrl} alt="" width={36} height={36} style={{ borderRadius: '50%', display: 'block' }} />
+            ) : (
+              <span style={{ width: 36, height: 36, borderRadius: '50%', background: '#e4edf4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 'bold' }}>
+                {loginInfo.displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span>
+              <span style={{ display: 'block', fontWeight: 'bold', fontFamily: 'var(--font-alegreya), serif', fontSize: 16 }}>{loginInfo.displayName}</span>
+              {loginInfo.memberType && <span style={{ display: 'block', fontSize: 12, color: '#5c6570' }}>{loginInfo.memberType}</span>}
+            </span>
+          </a>
+
+          <a
+            href={loginInfo.logoutUrl}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: '#a9ce3a',
+              color: '#23231f',
+              borderRadius: 4,
+              padding: '8px 12px',
+              fontWeight: 'bold',
+              fontFamily: 'var(--font-alegreya), serif',
+              textTransform: 'uppercase',
+              fontSize: 13,
+            }}
+          >
+            Sign Out
+          </a>
+        </div>
+      )}
+
+      {open && pos && !loggedIn && (
         <form
           onSubmit={handleSubmit}
           role="dialog"
           aria-label="Member login"
-          style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 8,
-            width: 260,
-            background: '#fff',
-            color: '#212529',
-            borderRadius: 6,
-            boxShadow: '0 4px 20px rgba(0,0,0,.25)',
-            padding: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-            zIndex: 50,
-          }}
+          style={{ ...popupBaseStyle, top: pos.top, left: pos.left, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}
         >
           <div style={{ fontWeight: 'bold', fontFamily: 'var(--font-alegreya), serif', fontSize: 16 }}>
             Member Login
