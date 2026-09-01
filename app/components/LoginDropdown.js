@@ -18,6 +18,43 @@ async function fetchFreshNonce() {
   }
 }
 
+// Fire-and-forget: also plant a session on rM's own domain (my.smenet.org)
+// after a successful headless login here, so the member is recognized
+// there too instead of needing a second login. Two hidden iframes, in
+// sequence — first clear any existing rM session in this browser (rM's
+// login.aspx honors an already-active session cookie over an incoming
+// token, so skipping this could silently hand the session to whoever was
+// ALREADY logged into rM in this browser, not the person who just
+// authenticated here), then hand off the token for who actually just
+// logged in. Neither result is observed or waited on — our own WP login
+// already fully succeeded independently of whatever happens with these.
+function establishRmSession(rmSsoToken) {
+  const clearFrame = document.createElement('iframe');
+  clearFrame.style.display = 'none';
+  clearFrame.setAttribute('aria-hidden', 'true');
+  clearFrame.title = '';
+  clearFrame.src = `${RM_BASE}/account/logout.aspx`;
+
+  let fired = false;
+  function fireLogin() {
+    if (fired) return;
+    fired = true;
+    const returnUrl = `${window.location.origin}/`;
+    const loginFrame = document.createElement('iframe');
+    loginFrame.style.display = 'none';
+    loginFrame.setAttribute('aria-hidden', 'true');
+    loginFrame.title = '';
+    loginFrame.src = `${RM_BASE}/account/login.aspx?sso=${encodeURIComponent(rmSsoToken)}&RedirectUrl=${encodeURIComponent(returnUrl)}`;
+    document.body.appendChild(loginFrame);
+    setTimeout(() => loginFrame.remove(), 8000);
+    clearFrame.remove();
+  }
+
+  clearFrame.addEventListener('load', fireLogin);
+  document.body.appendChild(clearFrame);
+  setTimeout(fireLogin, 2500); // safety net in case the load event never fires
+}
+
 const popupBaseStyle = {
   position: 'fixed',
   width: POPUP_WIDTH,
@@ -101,6 +138,7 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
         setPassword('');
         setOpen(false);
         onAuthChange(data.data);
+        if (data.data.rmSsoToken) establishRmSession(data.data.rmSsoToken);
         return;
       }
 
