@@ -275,7 +275,7 @@ function NavItem({ label, href, items, color, fontSize = 14, padding = '0 16px',
   );
 }
 
-export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError, loginInfo }) {
+export default function RealHome({ slides, inspiringCards, newsItems, slidesError, cardsError, postsError, loginInfo, onAuthChange }) {
   const carousel = useCarousel(slides.length);
 
   // Only fetch the background photo for a slide once it's actually been shown,
@@ -303,7 +303,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '8px 0' }}>
             <a href="https://my.smenet.org/my-account/shopping-cart" title="Shopping Cart" style={{ color: UTILITY_TEXT, fontSize: 15 }}>&#128722;</a>
-            <LoginDropdown loginInfo={loginInfo} />
+            <LoginDropdown loginInfo={loginInfo} onAuthChange={onAuthChange} />
           </div>
         </div>
       </div>

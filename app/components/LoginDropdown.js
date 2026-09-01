@@ -28,11 +28,12 @@ const popupBaseStyle = {
   zIndex: 200,
 };
 
-export default function LoginDropdown({ loginInfo }) {
+export default function LoginDropdown({ loginInfo, onAuthChange }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   const [pos, setPos] = useState(null);
   const wrapRef = useRef(null);
@@ -85,18 +86,21 @@ export default function LoginDropdown({ loginInfo }) {
 
     const nonce = await fetchFreshNonce();
     const body = new FormData();
-    body.append('action', 'sme_rm_login');
+    body.append('action', 'sme_rm_login_headless');
     body.append('nonce', nonce || '');
     body.append('email', email.trim());
     body.append('password', password);
-    body.append('returnUrl', window.location.href);
 
     try {
       const res = await fetch(AJAX_URL, { method: 'POST', body });
       const data = await res.json();
 
-      if (data?.success && data?.data?.redirectUrl) {
-        window.location.href = data.data.redirectUrl;
+      if (data?.success && data?.data?.loggedIn) {
+        setLoading(false);
+        setEmail('');
+        setPassword('');
+        setOpen(false);
+        onAuthChange(data.data);
         return;
       }
 
@@ -107,6 +111,24 @@ export default function LoginDropdown({ loginInfo }) {
       setLoading(false);
       setError('A network error occurred. Please try again.');
     }
+  }
+
+  async function handleLogout() {
+    setSigningOut(true);
+    const nonce = await fetchFreshNonce();
+    const body = new FormData();
+    body.append('action', 'sme_rm_logout');
+    body.append('nonce', nonce || '');
+
+    try {
+      await fetch(AJAX_URL, { method: 'POST', body });
+    } catch {
+      // Best-effort — if the request itself fails, still drop the visible
+      // logged-in state so the header isn't stuck showing stale info.
+    }
+    setSigningOut(false);
+    setOpen(false);
+    onAuthChange(false);
   }
 
   const loggedIn = !!loginInfo;
@@ -162,24 +184,30 @@ export default function LoginDropdown({ loginInfo }) {
             </span>
           </a>
 
-          <a
-            href={loginInfo.logoutUrl}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={signingOut}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: 8,
               background: '#a9ce3a',
               color: '#23231f',
+              border: 'none',
               borderRadius: 4,
               padding: '8px 12px',
               fontWeight: 'bold',
               fontFamily: 'var(--font-alegreya), serif',
               textTransform: 'uppercase',
               fontSize: 13,
+              cursor: signingOut ? 'default' : 'pointer',
+              opacity: signingOut ? 0.7 : 1,
             }}
           >
-            Sign Out
-          </a>
+            {signingOut ? 'Signing out…' : 'Sign Out'}
+          </button>
         </div>
       )}
 

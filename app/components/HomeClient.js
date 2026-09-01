@@ -30,35 +30,18 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
   // null = still checking, false = logged out, object = logged in
   const [loginInfo, setLoginInfo] = useState(null);
 
-  // The SSO plugin already computes everything the header needs — display
-  // name, avatar, member type, and a properly-nonced logout URL — and
-  // localizes it as `window.smeRmSso` on every WP-rendered page (see
-  // wp_localize_script() in class-rm-login.php). Our homepage never renders
-  // through WP's PHP/theme layer, so we can't read that global directly —
-  // but /login/ IS a real WP-rendered page (our Worker proxies it there),
-  // so fetching its HTML in the background and pulling that same object out
-  // of the markup gets us the exact same data without needing any new
-  // WordPress-side endpoint. This is same-origin + credentials, so the
-  // browser sends the WP login cookie automatically once someone's signed
-  // in — we never touch credentials or reconstruct a logout nonce ourselves.
+  // Read-only check against the SSO plugin's own headless "who am I" action
+  // — same-origin, so the browser sends the WP login cookie automatically
+  // once someone's signed in. This and the login/logout actions below are
+  // the plugin's new headless-friendly endpoints (sme_rm_whoami /
+  // sme_rm_login_headless / sme_rm_logout), added specifically because the
+  // original sme_rm_login flow depends on WordPress's theme layer to
+  // complete its rM-domain redirect dance, which never runs for a fully
+  // static frontend like this one.
   useEffect(() => {
-    fetch('/login/', { credentials: 'same-origin' })
-      .then((res) => (res.ok ? res.text() : Promise.reject(res.status)))
-      .then((html) => {
-        const match = html.match(/var\s+smeRmSso\s*=\s*(\{.*?\});/s);
-        if (!match) throw new Error('smeRmSso config not found in /login/ markup');
-        const cfg = JSON.parse(match[1]);
-        if (cfg.loggedIn) {
-          setLoginInfo({
-            displayName: cfg.displayName || 'Member',
-            avatarUrl: cfg.avatarUrl || '',
-            memberType: cfg.memberType || '',
-            logoutUrl: cfg.logoutUrl || '/wp-login.php?action=logout',
-          });
-        } else {
-          setLoginInfo(false);
-        }
-      })
+    fetch('/wp-admin/admin-ajax.php?action=sme_rm_whoami', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data) => setLoginInfo(data?.success && data.data?.loggedIn ? data.data : false))
       .catch(() => setLoginInfo(false));
   }, []);
 
@@ -176,7 +159,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
     facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(p.link)}`,
   }));
 
-  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError, loginInfo };
+  const props = { slides, inspiringCards, newsItems, postsError, slidesError, cardsError, loginInfo, onAuthChange: setLoginInfo };
 
   return look === 'wireframe' ? <WireframeHome {...props} /> : <RealHome {...props} />;
 }
