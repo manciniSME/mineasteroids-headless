@@ -18,76 +18,35 @@ async function fetchFreshNonce() {
   }
 }
 
-// Fire-and-forget: also plant a session on rM's own domain (my.smenet.org)
-// after a successful headless login here, so the member is recognized
-// there too instead of needing a second login. Two hidden iframes, in
-// sequence — first clear any existing rM session in this browser (rM's
-// login.aspx honors an already-active session cookie over an incoming
-// token, so skipping this could silently hand the session to whoever was
-// ALREADY logged into rM in this browser, not the person who just
-// authenticated here), then hand off the token for who actually just
-// logged in. Neither result is observed or waited on — our own WP login
-// already fully succeeded independently of whatever happens with these.
+// Also plant a session on rM's own domain (my.smenet.org) after a
+// successful headless login here, so the member is recognized there too
+// instead of needing a second login.
+//
+// Superseded the earlier hidden-iframe version: confirmed via live testing
+// that the request/redirect through rM completed successfully every time
+// (visible in the console as the iframe landing back on our own origin),
+// but the session cookie it tried to set never stuck — consistent with
+// third-party cookie blocking, which applies to cookies set inside a
+// cross-site iframe regardless of Incognito. That's a hard browser
+// security boundary, not something fixable with more retries or delays.
+//
+// A real top-level navigation isn't subject to that blocking, so this
+// trades the invisible iframe for a brief, visible flash through
+// my.smenet.org and back — our own WP login here has already fully
+// succeeded before this runs, so there's nothing left to lose if this
+// leg has trouble; worst case the visitor just isn't recognized on
+// my.smenet.org until they log in there directly.
+//
+// Deliberately skips the old pre-clear step (which cleared any existing
+// rM session before handing off the new token) — that only matters when
+// a DIFFERENT rM identity is already active in this browser, which is
+// uncommon for a real member and would cost a second visible hop here.
+// The `sme_rm_headless=1` marker tells handle_sso_callback() in the
+// plugin to land back on a clean homepage URL afterward — see the
+// comment there for why that's needed only for this flow.
 function establishRmSession(rmSsoToken) {
-  console.log('[SME SSO handoff] starting — clearing any existing rM session first');
-  const clearFrame = document.createElement('iframe');
-  clearFrame.style.display = 'none';
-  clearFrame.setAttribute('aria-hidden', 'true');
-  clearFrame.title = '';
-  clearFrame.src = `${RM_BASE}/account/logout.aspx`;
-
-  // Deliberately NOT reacting to the iframe's own 'load' event here — that
-  // only means logout.aspx's HTML document arrived, not that rM's server
-  // has actually finished terminating the session. Proceeding to the login
-  // step as soon as 'load' fires risks racing ahead of that, handing off
-  // the new token before the old session is really gone — which is exactly
-  // what "rM's login.aspx honors an existing session cookie over an
-  // incoming token" would then still exploit. A flat, more generous wait
-  // (rather than whichever of load/timeout comes first) gives it more room
-  // regardless of how fast the document itself loads.
-  let fired = false;
-  function fireLogin(reason) {
-    if (fired) return;
-    fired = true;
-    console.log('[SME SSO handoff] clear step done (' + reason + '), handing off token to rM login.aspx');
-
-    const returnUrl = `${window.location.origin}/`;
-    const loginFrame = document.createElement('iframe');
-    loginFrame.style.display = 'none';
-    loginFrame.setAttribute('aria-hidden', 'true');
-    loginFrame.title = '';
-    loginFrame.src = `${RM_BASE}/account/login.aspx?sso=${encodeURIComponent(rmSsoToken)}&RedirectUrl=${encodeURIComponent(returnUrl)}`;
-
-    // Purely diagnostic — same readability trick as the silent-detect check.
-    // Landing back on our own origin proves rM received the token and chose
-    // to redirect (the request/redirect itself worked); it does NOT prove
-    // the session cookie it tried to set on my.smenet.org actually stuck —
-    // that part is invisible to us either way, since a cookie on rM's own
-    // domain can never be read from our JS regardless of outcome. The only
-    // real way to confirm the cookie stuck is opening my.smenet.org (or ME,
-    // or TUC) directly in a normal tab afterward and checking it shows
-    // logged in there.
-    let checked = false;
-    function checkLanding(trigger) {
-      if (checked) return;
-      checked = true;
-      try {
-        const href = loginFrame.contentWindow.location.href;
-        console.log('[SME SSO handoff] loginFrame same-origin-readable, href =', href, '| trigger:', trigger, '— request/redirect completed; whether the my.smenet.org cookie actually stuck can only be confirmed by visiting my.smenet.org directly');
-      } catch (err) {
-        console.log('[SME SSO handoff] loginFrame still cross-origin | trigger:', trigger, '| error:', err && err.message, '— rM never redirected back, so the handoff request itself did not complete');
-      }
-    }
-    loginFrame.addEventListener('load', () => checkLanding('load event'));
-    setTimeout(() => checkLanding('4s timeout'), 4000);
-
-    document.body.appendChild(loginFrame);
-    setTimeout(() => loginFrame.remove(), 8000);
-    clearFrame.remove();
-  }
-
-  document.body.appendChild(clearFrame);
-  setTimeout(() => fireLogin('4s wait'), 4000);
+  const returnUrl = `${window.location.origin}/?sme_rm_headless=1`;
+  window.location.href = `${RM_BASE}/account/login.aspx?sso=${encodeURIComponent(rmSsoToken)}&RedirectUrl=${encodeURIComponent(returnUrl)}`;
 }
 
 const popupBaseStyle = {
