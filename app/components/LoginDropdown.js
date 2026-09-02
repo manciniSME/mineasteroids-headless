@@ -59,6 +59,51 @@ const popupBaseStyle = {
   zIndex: 200,
 };
 
+// loginInfo is null while the initial sme_rm_whoami check is still in
+// flight, false once confirmed logged out, or the user object once
+// confirmed logged in. Treating null the same as false (as a naive !!
+// check would) lets someone open the interactive login form and start
+// typing before we've actually confirmed they're logged out — worth
+// avoiding even for this brief a window, since it's exactly the kind of
+// moment that produced a "login incorrect" for a login attempt that was
+// never necessary in the first place.
+function LoginTrigger({ loginInfo, btnRef, open, onClick }) {
+  if (loginInfo === null) {
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,.6)', font: 'inherit' }}>
+        Login
+      </span>
+    );
+  }
+
+  const loggedIn = !!loginInfo;
+  return (
+    <button
+      ref={btnRef}
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-haspopup="true"
+      style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: '#fff', font: 'inherit', padding: 0, cursor: 'pointer' }}
+    >
+      {loggedIn ? (
+        <>
+          {loginInfo.avatarUrl ? (
+            <img src={loginInfo.avatarUrl} alt="" width={24} height={24} style={{ borderRadius: '50%', display: 'block' }} />
+          ) : (
+            <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+              {loginInfo.displayName.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span style={{ fontWeight: 'bold' }}>Hi, {loginInfo.displayName}</span>
+        </>
+      ) : (
+        'Login'
+      )}
+    </button>
+  );
+}
+
 export default function LoginDropdown({ loginInfo, onAuthChange }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -167,29 +212,7 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="true"
-        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: '#fff', font: 'inherit', padding: 0, cursor: 'pointer' }}
-      >
-        {loggedIn ? (
-          <>
-            {loginInfo.avatarUrl ? (
-              <img src={loginInfo.avatarUrl} alt="" width={24} height={24} style={{ borderRadius: '50%', display: 'block' }} />
-            ) : (
-              <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
-                {loginInfo.displayName.charAt(0).toUpperCase()}
-              </span>
-            )}
-            <span style={{ fontWeight: 'bold' }}>Hi, {loginInfo.displayName}</span>
-          </>
-        ) : (
-          'Login'
-        )}
-      </button>
+      <LoginTrigger loginInfo={loginInfo} btnRef={btnRef} open={open} onClick={() => setOpen((v) => !v)} />
 
       {open && pos && loggedIn && (
         <div
