@@ -45,77 +45,20 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
       .catch(() => setLoginInfo(false));
   }, []);
 
-  // Silent cross-domain SSO check. The SME Re:Members SSO plugin normally
-  // does this itself via a hidden iframe injected in wp_footer — but that
-  // only fires when WordPress's PHP actually renders the page, and our
-  // homepage never touches WP's theme layer (it's a static Next.js export).
-  // So a visitor who's already signed in on my.smenet.org, but has never
-  // explicitly logged in on THIS site, would otherwise sit stuck on "Login"
-  // forever. This reproduces the plugin's own iframe check client-side:
-  // point a hidden iframe at rM's login.aspx with a RedirectUrl back to our
-  // own homepage. If the browser already carries an active rM session
-  // cookie, rM silently redirects the iframe back to us with an ?sso=
-  // token, which our Worker routes to WP, WP validates it and sets our
-  // auth cookie, and we detect the iframe landing back on our own origin
-  // and reload the real page to pick it up. If there's no rM session, the
-  // iframe just stays cross-origin and nothing happens.
-  useEffect(() => {
-    if (loginInfo !== false) return; // only once we've confirmed no local WP session
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('sso') || params.has('sso_check') || params.has('sme_rm_no_sso')) {
-      console.log('[SME SSO] skipped: already mid-callback (sso/sso_check/sme_rm_no_sso in URL)');
-      return;
-    }
-    if (document.cookie.includes('sme_rm_sso_checked=1')) {
-      console.log('[SME SSO] skipped: already checked in the last 5 min (sme_rm_sso_checked cookie present)');
-      return;
-    }
-
-    document.cookie = 'sme_rm_sso_checked=1; max-age=300; path=/';
-
-    const returnUrl = `${window.location.origin}/?sso_check=1`;
-    const ssoUrl = `https://my.smenet.org/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
-    console.log('[SME SSO] starting silent check, iframe src =', ssoUrl);
-
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.setAttribute('aria-hidden', 'true');
-    iframe.title = '';
-    iframe.src = ssoUrl;
-
-    let done = false;
-    function finish(reason) {
-      if (done) return;
-      try {
-        const href = iframe.contentWindow.location.href;
-        console.log('[SME SSO] iframe readable (same-origin), href =', href, '| trigger:', reason);
-        if (href.indexOf(window.location.origin) === 0) {
-          done = true;
-          // Auto-reload disabled while we investigate a reported reload
-          // loop (visible as the hero carousel rapidly flickering between
-          // slides) — most likely the WP auth cookie set inside this
-          // once-cross-origin iframe gets dropped by the browser's
-          // third-party cookie partitioning, so the reload just lands back
-          // on "logged out" and re-triggers the whole check again. Log only
-          // until that's confirmed.
-          console.log('[SME SSO] iframe landed back on our origin (would normally reload here — reload disabled while debugging)');
-        } else {
-          console.log('[SME SSO] iframe same-origin-readable but not on our origin yet — leaving it alone');
-        }
-      } catch (err) {
-        console.log('[SME SSO] iframe still cross-origin (no active rM session, or framing blocked) | trigger:', reason, '| error:', err && err.message);
-      }
-    }
-    iframe.addEventListener('load', () => finish('load event'));
-    document.body.appendChild(iframe);
-    const timer = setTimeout(() => finish('4s timeout'), 4000);
-
-    return () => {
-      clearTimeout(timer);
-      iframe.remove();
-    };
-  }, [loginInfo]);
+  // There used to be a silent cross-domain auto-detect here — a hidden
+  // iframe checking whether the browser already carried an active
+  // my.smenet.org session, so a visitor logged in elsewhere would be
+  // recognized here without doing anything. Removed: confirmed via the
+  // explicit-login handoff (see LoginDropdown.js) that a hidden cross-site
+  // iframe can't reliably set a cookie on my.smenet.org, because of
+  // third-party cookie blocking — the same restriction almost certainly
+  // applies to reading an existing one, which is consistent with this
+  // check having sat here doing nothing useful. The only way to make this
+  // reliable is the same fix the login handoff got — a real top-level
+  // redirect through my.smenet.org and back — but doing that on every
+  // single page load for every visitor (nearly all of whom have never
+  // logged into rM at all) is a worse trade than just not having the
+  // feature. An explicit login is the only supported way to sign in here.
 
   // The page ships with whatever was current at build time (fast first paint,
   // good LCP). This re-fetches on every load so edits made in wp-admin since
