@@ -36,6 +36,15 @@ function establishRmSession(rmSsoToken) {
   clearFrame.title = '';
   clearFrame.src = `${RM_BASE}/account/logout.aspx`;
 
+  // Deliberately NOT reacting to the iframe's own 'load' event here — that
+  // only means logout.aspx's HTML document arrived, not that rM's server
+  // has actually finished terminating the session. Proceeding to the login
+  // step as soon as 'load' fires risks racing ahead of that, handing off
+  // the new token before the old session is really gone — which is exactly
+  // what "rM's login.aspx honors an existing session cookie over an
+  // incoming token" would then still exploit. A flat, more generous wait
+  // (rather than whichever of load/timeout comes first) gives it more room
+  // regardless of how fast the document itself loads.
   let fired = false;
   function fireLogin(reason) {
     if (fired) return;
@@ -77,9 +86,8 @@ function establishRmSession(rmSsoToken) {
     clearFrame.remove();
   }
 
-  clearFrame.addEventListener('load', () => fireLogin('load event'));
   document.body.appendChild(clearFrame);
-  setTimeout(() => fireLogin('2.5s timeout'), 2500); // safety net in case the load event never fires
+  setTimeout(() => fireLogin('4s wait'), 4000);
 }
 
 const popupBaseStyle = {
