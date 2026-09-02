@@ -29,6 +29,7 @@ async function fetchFreshNonce() {
 // logged in. Neither result is observed or waited on — our own WP login
 // already fully succeeded independently of whatever happens with these.
 function establishRmSession(rmSsoToken) {
+  console.log('[SME SSO handoff] starting — clearing any existing rM session first');
   const clearFrame = document.createElement('iframe');
   clearFrame.style.display = 'none';
   clearFrame.setAttribute('aria-hidden', 'true');
@@ -36,23 +37,49 @@ function establishRmSession(rmSsoToken) {
   clearFrame.src = `${RM_BASE}/account/logout.aspx`;
 
   let fired = false;
-  function fireLogin() {
+  function fireLogin(reason) {
     if (fired) return;
     fired = true;
+    console.log('[SME SSO handoff] clear step done (' + reason + '), handing off token to rM login.aspx');
+
     const returnUrl = `${window.location.origin}/`;
     const loginFrame = document.createElement('iframe');
     loginFrame.style.display = 'none';
     loginFrame.setAttribute('aria-hidden', 'true');
     loginFrame.title = '';
     loginFrame.src = `${RM_BASE}/account/login.aspx?sso=${encodeURIComponent(rmSsoToken)}&RedirectUrl=${encodeURIComponent(returnUrl)}`;
+
+    // Purely diagnostic — same readability trick as the silent-detect check.
+    // Landing back on our own origin proves rM received the token and chose
+    // to redirect (the request/redirect itself worked); it does NOT prove
+    // the session cookie it tried to set on my.smenet.org actually stuck —
+    // that part is invisible to us either way, since a cookie on rM's own
+    // domain can never be read from our JS regardless of outcome. The only
+    // real way to confirm the cookie stuck is opening my.smenet.org (or ME,
+    // or TUC) directly in a normal tab afterward and checking it shows
+    // logged in there.
+    let checked = false;
+    function checkLanding(trigger) {
+      if (checked) return;
+      checked = true;
+      try {
+        const href = loginFrame.contentWindow.location.href;
+        console.log('[SME SSO handoff] loginFrame same-origin-readable, href =', href, '| trigger:', trigger, '— request/redirect completed; whether the my.smenet.org cookie actually stuck can only be confirmed by visiting my.smenet.org directly');
+      } catch (err) {
+        console.log('[SME SSO handoff] loginFrame still cross-origin | trigger:', trigger, '| error:', err && err.message, '— rM never redirected back, so the handoff request itself did not complete');
+      }
+    }
+    loginFrame.addEventListener('load', () => checkLanding('load event'));
+    setTimeout(() => checkLanding('4s timeout'), 4000);
+
     document.body.appendChild(loginFrame);
     setTimeout(() => loginFrame.remove(), 8000);
     clearFrame.remove();
   }
 
-  clearFrame.addEventListener('load', fireLogin);
+  clearFrame.addEventListener('load', () => fireLogin('load event'));
   document.body.appendChild(clearFrame);
-  setTimeout(fireLogin, 2500); // safety net in case the load event never fires
+  setTimeout(() => fireLogin('2.5s timeout'), 2500); // safety net in case the load event never fires
 }
 
 const popupBaseStyle = {
