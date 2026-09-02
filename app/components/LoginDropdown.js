@@ -49,6 +49,30 @@ function establishRmSession(rmSsoToken) {
   window.location.href = `${RM_BASE}/account/login.aspx?sso=${encodeURIComponent(rmSsoToken)}&RedirectUrl=${encodeURIComponent(returnUrl)}`;
 }
 
+// On-demand version of the same idea, for someone who's already signed
+// into rM elsewhere (my.smenet.org, ME, TUC) and wants that recognized
+// here without retyping credentials. Deliberately NOT automatic on page
+// load — checked live against the real smenet.org: it doesn't auto-check
+// on load either, only when someone actually clicks Login. That's also
+// the only way this can degrade gracefully: if rM doesn't recognize the
+// visitor, login.aspx just shows ITS OWN hosted login form with no
+// automatic way back to us, so doing this automatically for every visitor
+// would mean everyone without a session gets diverted off the homepage
+// entirely. Gating it behind an explicit click means only someone who
+// already believes they're signed in elsewhere takes that risk.
+//
+// No token to hand off here — we're asking rM "do you already know this
+// browser?", not providing proof of identity like establishRmSession()
+// does. If rM says yes, it redirects back with its own fresh token, which
+// handle_sso_callback() already knows how to turn into a WP login (this is
+// the plugin's existing, unmodified first-time-login path — the visitor
+// isn't logged in yet at that point, so the sme_rm_headless-gated branch
+// doesn't even apply; it already redirects to a clean URL by default).
+function checkExistingRmSession() {
+  const returnUrl = `${window.location.origin}/`;
+  window.location.href = `${RM_BASE}/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
+}
+
 const popupBaseStyle = {
   position: 'fixed',
   width: POPUP_WIDTH,
@@ -326,6 +350,23 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
             }}
           >
             {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+
+          <button
+            type="button"
+            onClick={checkExistingRmSession}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: '#5c6570',
+              fontSize: 11,
+              textAlign: 'center',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Already signed in elsewhere? Continue
           </button>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
