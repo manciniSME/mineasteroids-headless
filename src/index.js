@@ -10,6 +10,11 @@ const WP_PATH_PREFIXES = [
   '/wp-content',
   '/wp-includes',
   '/xmlrpc.php',
+  '/wp-cron.php', // WordPress's own loopback request hits this via the public
+                  // hostname (Cloudflare-proxied), same as any other visitor —
+                  // missing this sent it to static-asset serving instead, which
+                  // rejects the POST with a 405, silently breaking WP-Cron
+                  // (scheduled posts, plugin update checks, etc.) entirely.
   '/login', // WP page hosting the [sme_rm_login_widget] SSO shortcode
 ];
 
