@@ -60,12 +60,14 @@ function establishRmSession(rmSsoToken) {
 // browsing context is required for rM's cookie to behave normally (an
 // iframe hits the same third-party cookie blocking that broke the
 // earlier hidden-iframe attempts), but a popup gets that same first-party
-// behavior WITHOUT taking the visitor off this page. If rM doesn't
-// recognize the browser, the popup just shows rM's own hosted login form
-// in its own small window — the visitor can finish signing in there, or
-// simply close it and use the inline form here instead, which stays fully
-// usable the entire time. Falls back to a plain top-level redirect if the
-// popup gets blocked.
+// behavior WITHOUT taking the visitor off this page.
+//
+// Only the popup shows while it's checking — the inline form is held back
+// (via onGiveUp) until either the popup can't be opened at all, or the
+// visitor closes it without completing a login. If rM doesn't recognize
+// the browser, the popup shows rM's own hosted login form in its own
+// small window; the visitor can finish there, or close it to fall back to
+// the inline form here instead.
 //
 // No token to hand off here — we're asking rM "do you already know this
 // browser?", not providing proof of identity like establishRmSession()
@@ -74,7 +76,7 @@ function establishRmSession(rmSsoToken) {
 // login (the plugin's existing, unmodified first-time-login path — the
 // visitor isn't logged in yet at that point, so the sme_rm_headless-gated
 // branch doesn't even apply; it already redirects to a clean URL).
-function checkExistingRmSession(onAuthChange) {
+function checkExistingRmSession(onAuthChange, onGiveUp) {
   const returnUrl = `${window.location.origin}/`;
   const url = `${RM_BASE}/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
 
@@ -93,15 +95,16 @@ function checkExistingRmSession(onAuthChange) {
 
   if (!popup) {
     // Blocked (rare for a popup opened synchronously from a real click,
-    // but some hardened browsers/extensions still do it) — degrade to the
-    // old behavior rather than doing nothing.
-    window.location.href = url;
+    // but some hardened browsers/extensions still do it) — fall back to
+    // the inline form rather than doing nothing.
+    onGiveUp();
     return;
   }
 
   const interval = setInterval(async () => {
     if (popup.closed) {
       clearInterval(interval);
+      onGiveUp(); // closed without ever landing back on our origin
       return;
     }
     try {
@@ -297,8 +300,14 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
         btnRef={btnRef}
         open={open}
         onClick={() => {
-          if (!loggedIn && !open) checkExistingRmSession(onAuthChange);
-          setOpen((v) => !v);
+          if (loggedIn || open) {
+            setOpen((v) => !v);
+            return;
+          }
+          // Hold the inline form back — only the popup shows while it's
+          // checking. It opens here (not in the effect below) purely as a
+          // fallback for when the popup can't run at all.
+          checkExistingRmSession(onAuthChange, () => setOpen(true));
         }}
       />
 

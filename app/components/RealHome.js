@@ -289,8 +289,8 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
     <div style={{ width: '100%', overflowX: 'hidden' }}>
       {/* utility bar */}
       <div style={{ background: UTILITY_BG, color: UTILITY_TEXT, fontSize: 13.5 }}>
-        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px', display: 'flex', alignItems: 'stretch', justifyContent: 'space-between', flexWrap: 'wrap', minHeight: 42 }}>
-          <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 15px', display: 'flex', alignItems: 'stretch', justifyContent: 'space-between', minHeight: 42 }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', minWidth: 0 }}>
             {UTILITY_FLAT_LINKS.map((l) => (
               <a key={l.label} href={l.href} style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', padding: '0 16px', color: UTILITY_TEXT, fontSize: 13.5 }}>{l.label}</a>
             ))}
@@ -301,7 +301,7 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
             ))}
             <NavItem label="Membership Lookup" items={MEMBERSHIP_LOOKUP_ITEMS} color={UTILITY_TEXT} fontSize={13.5} ddWidth={285} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '8px 0', flexShrink: 0 }}>
             <a href="https://my.smenet.org/my-account/shopping-cart" title="Shopping Cart" style={{ color: UTILITY_TEXT, fontSize: 15 }}>&#128722;</a>
             <LoginDropdown loginInfo={loginInfo} onAuthChange={onAuthChange} />
           </div>
