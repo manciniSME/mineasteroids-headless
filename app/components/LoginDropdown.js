@@ -51,26 +51,82 @@ function establishRmSession(rmSsoToken) {
 
 // On-demand version of the same idea, for someone who's already signed
 // into rM elsewhere (my.smenet.org, ME, TUC) and wants that recognized
-// here without retyping credentials. Deliberately NOT automatic on page
-// load — checked live against the real smenet.org: it doesn't auto-check
-// on load either, only when someone actually clicks Login. That's also
-// the only way this can degrade gracefully: if rM doesn't recognize the
-// visitor, login.aspx just shows ITS OWN hosted login form with no
-// automatic way back to us, so doing this automatically for every visitor
-// would mean everyone without a session gets diverted off the homepage
-// entirely. Gating it behind an explicit click means only someone who
-// already believes they're signed in elsewhere takes that risk.
+// here without retyping credentials. Checked live against the real
+// smenet.org: it doesn't auto-check on page load either, only when
+// someone actually clicks Login — matched here, fired once per click of
+// the Login trigger while logged out.
+//
+// Runs in a popup rather than navigating the main tab: a real top-level
+// browsing context is required for rM's cookie to behave normally (an
+// iframe hits the same third-party cookie blocking that broke the
+// earlier hidden-iframe attempts), but a popup gets that same first-party
+// behavior WITHOUT taking the visitor off this page. If rM doesn't
+// recognize the browser, the popup just shows rM's own hosted login form
+// in its own small window — the visitor can finish signing in there, or
+// simply close it and use the inline form here instead, which stays fully
+// usable the entire time. Falls back to a plain top-level redirect if the
+// popup gets blocked.
 //
 // No token to hand off here — we're asking rM "do you already know this
 // browser?", not providing proof of identity like establishRmSession()
-// does. If rM says yes, it redirects back with its own fresh token, which
-// handle_sso_callback() already knows how to turn into a WP login (this is
-// the plugin's existing, unmodified first-time-login path — the visitor
-// isn't logged in yet at that point, so the sme_rm_headless-gated branch
-// doesn't even apply; it already redirects to a clean URL by default).
-function checkExistingRmSession() {
+// does. If rM says yes, it redirects the popup back with its own fresh
+// token, which handle_sso_callback() already knows how to turn into a WP
+// login (the plugin's existing, unmodified first-time-login path — the
+// visitor isn't logged in yet at that point, so the sme_rm_headless-gated
+// branch doesn't even apply; it already redirects to a clean URL).
+function checkExistingRmSession(onAuthChange) {
   const returnUrl = `${window.location.origin}/`;
-  window.location.href = `${RM_BASE}/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
+  const url = `${RM_BASE}/account/login.aspx?RedirectUrl=${encodeURIComponent(returnUrl)}`;
+
+  const width = 480;
+  const height = 640;
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+  const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,location=no,menubar=no,status=no`;
+
+  let popup;
+  try {
+    popup = window.open(url, 'sme_rm_check', features);
+  } catch {
+    popup = null;
+  }
+
+  if (!popup) {
+    // Blocked (rare for a popup opened synchronously from a real click,
+    // but some hardened browsers/extensions still do it) — degrade to the
+    // old behavior rather than doing nothing.
+    window.location.href = url;
+    return;
+  }
+
+  const interval = setInterval(async () => {
+    if (popup.closed) {
+      clearInterval(interval);
+      return;
+    }
+    try {
+      const href = popup.location.href;
+      if (href.indexOf(window.location.origin) !== 0) return; // still on rM, keep waiting
+      clearInterval(interval);
+      popup.close();
+      // The popup's own navigation back to our domain is what got the WP
+      // auth cookie set (a first-party set, since by that point the
+      // popup's own top-level context IS our origin) — that cookie is
+      // shared across every tab/window on this origin immediately, so a
+      // fresh whoami check from THIS tab already reflects it with no
+      // reload needed.
+      try {
+        const res = await fetch('/wp-admin/admin-ajax.php?action=sme_rm_whoami', { credentials: 'same-origin' });
+        const data = await res.json();
+        onAuthChange(data?.success && data.data?.loggedIn ? data.data : false);
+      } catch {
+        // Leave state as-is — nothing else to do if this last check fails.
+      }
+    } catch {
+      // Still cross-origin (on rM, no session found yet, or the visitor
+      // is filling in rM's own form) — keep waiting.
+    }
+  }, 500);
 }
 
 const popupBaseStyle = {
@@ -236,7 +292,15 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <LoginTrigger loginInfo={loginInfo} btnRef={btnRef} open={open} onClick={() => setOpen((v) => !v)} />
+      <LoginTrigger
+        loginInfo={loginInfo}
+        btnRef={btnRef}
+        open={open}
+        onClick={() => {
+          if (!loggedIn && !open) checkExistingRmSession(onAuthChange);
+          setOpen((v) => !v);
+        }}
+      />
 
       {open && pos && loggedIn && (
         <div
@@ -352,22 +416,9 @@ export default function LoginDropdown({ loginInfo, onAuthChange }) {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
-          <button
-            type="button"
-            onClick={checkExistingRmSession}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              color: '#5c6570',
-              fontSize: 11,
-              textAlign: 'center',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            Already signed in elsewhere? Continue
-          </button>
+          <p style={{ margin: 0, fontSize: 10.5, color: '#8a929b', textAlign: 'center' }}>
+            Already signed in elsewhere? We checked a moment ago in a small window — if it didn't find you, sign in above.
+          </p>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
             <a href={`${RM_BASE}/account/login.aspx`} target="_blank" rel="noopener noreferrer" style={{ color: '#1b75bb' }}>
