@@ -69,7 +69,7 @@ export default function WireframeHome({ slides, inspiringCards, newsItems, slide
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {cardsError && <p style={{ color: '#900' }}>Inspiring cards: {cardsError}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem' }}>
-            {inspiringCards.map((card, idx) => (
+            {(inspiringCards ?? []).map((card, idx) => (
               <div key={idx} style={{ textAlign: 'center' }}>
                 <div style={{ ...boxStyle, width: 64, height: 64, margin: '0 auto 0.75rem', borderRadius: '50%' }} />
                 <div style={{ fontWeight: 'bold', marginBottom: '0.4rem' }}>{card.heading}</div>

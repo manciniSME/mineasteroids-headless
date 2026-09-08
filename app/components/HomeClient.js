@@ -6,6 +6,7 @@ import {
   POSTS_QUERY,
   HERO_SLIDES_QUERY,
   INSPIRING_CARDS_QUERY,
+  DEFAULT_INSPIRING_CARDS,
   mapSlides,
   mapCards,
 } from '../../lib/queries';
@@ -19,11 +20,14 @@ function getInitialLook() {
   return new URLSearchParams(window.location.search).get('look') === 'wireframe' ? 'wireframe' : 'real';
 }
 
-export default function HomeClient({ initialPosts, initialSlides, initialCards, initialErrors }) {
+export default function HomeClient({ initialPosts, initialSlides, initialErrors }) {
   const [look] = useState(getInitialLook);
   const [posts, setPosts] = useState(initialPosts);
   const [slides, setSlides] = useState(initialSlides);
-  const [inspiringCards, setInspiringCards] = useState(initialCards);
+  // null = not yet loaded from the live source — deliberately never
+  // initialized from build-time data. See the comment on the live fetch
+  // below and in page.js for why.
+  const [inspiringCards, setInspiringCards] = useState(null);
   const [postsError, setPostsError] = useState(initialErrors.posts);
   const [slidesError, setSlidesError] = useState(initialErrors.slides);
   const [cardsError, setCardsError] = useState(initialErrors.cards);
@@ -60,9 +64,12 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
   // logged into rM at all) is a worse trade than just not having the
   // feature. An explicit login is the only supported way to sign in here.
 
-  // The page ships with whatever was current at build time (fast first paint,
-  // good LCP). This re-fetches on every load so edits made in wp-admin since
-  // the last build still show up within a second of hitting the page.
+  // Posts and hero slides ship with whatever was current at build time
+  // (fast first paint, good LCP) and this re-fetches on every load so
+  // edits made in wp-admin since the last build still show up within a
+  // second of hitting the page. Inspiring Cards deliberately don't get
+  // that build-time head start — see the note above inspiringCards'
+  // useState and in page.js for why.
   useEffect(() => {
     wpFetch(POSTS_QUERY)
       .then((data) => {
@@ -81,15 +88,20 @@ export default function HomeClient({ initialPosts, initialSlides, initialCards, 
       })
       .catch((err) => setSlidesError(err.message));
 
+    // Unlike posts/slides above, this never carries a build-time value to
+    // fall back to — it's set here unconditionally (including the fallback
+    // placeholder on an empty/errored response) so the section only ever
+    // shows what's actually live right now.
     wpFetch(INSPIRING_CARDS_QUERY)
       .then((data) => {
         const nodes = data?.inspiringCards?.nodes ?? [];
-        if (nodes.length > 0) {
-          setInspiringCards(mapCards(nodes));
-          setCardsError(null);
-        }
+        setInspiringCards(nodes.length > 0 ? mapCards(nodes) : DEFAULT_INSPIRING_CARDS);
+        setCardsError(null);
       })
-      .catch((err) => setCardsError(err.message));
+      .catch((err) => {
+        setInspiringCards(DEFAULT_INSPIRING_CARDS);
+        setCardsError(err.message);
+      });
   }, []);
 
   const newsItems = posts.map((p) => ({

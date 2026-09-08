@@ -373,17 +373,29 @@ export default function RealHome({ slides, inspiringCards, newsItems, slidesErro
           <h3 style={{ fontFamily: 'var(--font-alegreya), serif', fontSize: 30, fontWeight: 400, color: BLUE, margin: '0 0 30px', textAlign: 'center' }}>SME. Inspiring Mining Professionals Worldwide.</h3>
           {cardsError && <p style={{ color: '#900' }}>Inspiring cards: {cardsError}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 30 }}>
-            {inspiringCards.map((card, idx) => (
-              <article key={idx} style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <LazyBgImage src={card.img || CARD_IMAGES[card.label]} alt={card.heading} style={{ height: 240, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 }}>
-                  {!card.img && !CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
-                </LazyBgImage>
-                <div style={{ background: PROMO_PANEL, padding: '26px 26px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, flex: 1 }}>
-                  <h4 style={{ fontSize: 19, lineHeight: 1.32, fontWeight: 700, color: '#fff', textAlign: 'center', margin: 0 }}>{card.heading}</h4>
-                  <a href={card.href} style={{ ...btnStyle, marginTop: 'auto' }}>{card.cta}</a>
-                </div>
-              </article>
-            ))}
+            {inspiringCards === null
+              ? // Deliberately no build-time content to show here yet — see
+                // HomeClient's note on this section. A same-sized skeleton
+                // avoids a layout jump once the live data replaces it a
+                // moment later, without ever risking showing a card that
+                // isn't actually published yet.
+                [0, 1, 2].map((i) => (
+                  <div key={i} style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ height: 240, ...PH }} />
+                    <div style={{ background: PROMO_PANEL, padding: '26px 26px 30px', height: 104 }} />
+                  </div>
+                ))
+              : inspiringCards.map((card, idx) => (
+                  <article key={idx} style={{ borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <LazyBgImage src={card.img || CARD_IMAGES[card.label]} alt={card.heading} style={{ height: 240, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: 8 }}>
+                      {!card.img && !CARD_IMAGES[card.label] && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666' }}>{card.label}</span>}
+                    </LazyBgImage>
+                    <div style={{ background: PROMO_PANEL, padding: '26px 26px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, flex: 1 }}>
+                      <h4 style={{ fontSize: 19, lineHeight: 1.32, fontWeight: 700, color: '#fff', textAlign: 'center', margin: 0 }}>{card.heading}</h4>
+                      <a href={card.href} style={{ ...btnStyle, marginTop: 'auto' }}>{card.cta}</a>
+                    </div>
+                  </article>
+                ))}
           </div>
         </div>
       </section>
