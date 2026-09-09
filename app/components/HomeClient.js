@@ -10,6 +10,7 @@ import {
   mapSlides,
   mapCards,
 } from '../../lib/queries';
+import { useLoginInfo } from './useLoginInfo';
 import RealHome from './RealHome';
 import WireframeHome from './WireframeHome';
 
@@ -31,23 +32,7 @@ export default function HomeClient({ initialPosts, initialSlides, initialErrors 
   const [postsError, setPostsError] = useState(initialErrors.posts);
   const [slidesError, setSlidesError] = useState(initialErrors.slides);
   const [cardsError, setCardsError] = useState(initialErrors.cards);
-  // null = still checking, false = logged out, object = logged in
-  const [loginInfo, setLoginInfo] = useState(null);
-
-  // Read-only check against the SSO plugin's own headless "who am I" action
-  // — same-origin, so the browser sends the WP login cookie automatically
-  // once someone's signed in. This and the login/logout actions below are
-  // the plugin's new headless-friendly endpoints (sme_rm_whoami /
-  // sme_rm_login_headless / sme_rm_logout), added specifically because the
-  // original sme_rm_login flow depends on WordPress's theme layer to
-  // complete its rM-domain redirect dance, which never runs for a fully
-  // static frontend like this one.
-  useEffect(() => {
-    fetch('/wp-admin/admin-ajax.php?action=sme_rm_whoami', { credentials: 'same-origin' })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data) => setLoginInfo(data?.success && data.data?.loggedIn ? data.data : false))
-      .catch(() => setLoginInfo(false));
-  }, []);
+  const [loginInfo, setLoginInfo] = useLoginInfo();
 
   // There used to be a silent cross-domain auto-detect here — a hidden
   // iframe checking whether the browser already carried an active
